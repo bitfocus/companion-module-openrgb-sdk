@@ -5,18 +5,28 @@ import { UpgradeScripts } from './upgrades.js'
 import { UpdateActions } from './actions.js'
 import { UpdateFeedbacks } from './feedbacks.js'
 import { UpdateVariableDefinitions } from './variables.js'
+import PQueue from 'p-queue'
+import pTimeout, { TimeoutError } from 'p-timeout'
+
+const POLL_TIMEOUT = 30000 // Generous timeout for the poll, so it doesn't get stuck
 
 class OpenRGBInstance extends InstanceBase {
+	#pollQueue = new PQueue({
+		concurrency: 1,
+	})
+
 	constructor(internal) {
 		super(internal)
 
 		this.devices = {}
+		this.devicesState = {}
 	}
 
 	async init(config) {
 		await this.configUpdated(config)
 
 		this.devices = {}
+		this.devicesState = {}
 		this.updateActions() // export actions
 		this.updateFeedbacks() // export feedbacks
 		this.updateVariableDefinitions() // export variable definitions
@@ -50,20 +60,18 @@ class OpenRGBInstance extends InstanceBase {
 		if (this.config.port !== oldConfig.port || this.config.host !== oldConfig.host) {
 			// Reset any tracked state
 			this.devices = {}
+			this.devicesState = {}
 			this.updateActions() // export actions
 			this.updateFeedbacks() // export feedbacks
 			this.updateVariableDefinitions() // export variable definitions
+			this.checkFeedbacks()
 
 			this.client = new Client('Companion', this.config.port, this.config.host)
 			this.updateStatus(InstanceStatus.Connecting)
 
 			this.client.on('connect', () => this.startStopPolling(true))
 			this.client.on('disconnect', () => this.startStopPolling(true))
-			this.client.on('deviceListUpdated', () =>
-				this.doPollDevices().catch((e) => {
-					this.log('error', `Poll failed: ${e?.message ?? e}`)
-				})
-			)
+			this.client.on('deviceListUpdated', () => this.#triggerPollDevices())
 
 			this.client
 				.connect()
@@ -71,7 +79,7 @@ class OpenRGBInstance extends InstanceBase {
 					this.updateStatus(InstanceStatus.Ok)
 					this.startStopPolling(true)
 
-					this.doPollDevices()
+					this.#triggerPollDevices()
 				})
 				.catch((e) => {
 					this.updateStatus(InstanceStatus.UnknownError, `Connection failed: ${e?.message ?? e}`)
@@ -124,41 +132,59 @@ class OpenRGBInstance extends InstanceBase {
 
 		if (run && !this.pollTimer && this.config.poll_interval) {
 			this.pollTimer = setInterval(() => {
-				this.doPollDevices().catch((e) => {
-					this.log('error', `Poll failed: ${e?.message ?? e}`)
-				})
+				this.#triggerPollDevices()
 			}, this.config.poll_interval)
 		}
 	}
 
-	async doPollDevices() {
-		// TODO - ensure not run concurrently
+	#triggerPollDevices() {
+		this.#pollQueue
+			.add(async () => {
+				const abortController = new AbortController()
+				await pTimeout(this.#doPollDevices(abortController.signal), {
+					milliseconds: POLL_TIMEOUT,
+					fallback: () => {
+						abortController.abort()
+						throw new TimeoutError('Timed out')
+					},
+				})
+			})
+			.catch((e) => {
+				this.log('error', `Poll failed: ${e?.message ?? e}`)
+			})
+	}
 
-		// TODO - listen to deviceListUpdated instead of timed polling?
-
+	async #doPollDevices(signal) {
 		const newDevices = {}
+		const newState = {}
 
 		const rawDevices = await Promise.all(await this.client.getAllControllerData())
+		if (signal.aborted) return
+
 		for (const device of rawDevices) {
 			// Generate an id that should be stable, unlike the `deviceId` used by the api which is an index
-			const syntheticId = `${device.name || device.vendor}:${device.serial || device.location}`
+			const syntheticId = `${device.name || device.vendor}:${device.serial || device.location}`.trim()
 
 			newDevices[syntheticId] = {
 				deviceIndex: device.deviceId,
 				name: device.name,
 				leds: (device.leds || []).map((l) => l.name),
 			}
-			// console.log('dev', device)
+			newState[syntheticId] = {
+				colors: device.colors || [],
+			}
 		}
+
+		if (signal.aborted) return
 
 		if (!isEqual(this.devices, newDevices)) {
 			this.devices = newDevices
-			console.log('devices', newDevices, JSON.stringify(rawDevices, undefined, 4))
 
-			// TODO - performance...
 			this.updateActions()
 			this.updateFeedbacks()
+		}
 
+		if (!isEqual(this.devicesState, newState)) {
 			// TODO - update variables
 			this.checkFeedbacks()
 		}
