@@ -1,12 +1,12 @@
 {
-	"id": "openrgb-server",
-	"name": "openrgb-server",
-	"shortname": "openrgb-server",
+	"id": "openrgb-sdk",
+	"name": "openrgb-sdk",
+	"shortname": "openrgb-sdk",
 	"description": "Control RGB PC lighting with OpenRGB",
 	"version": "0.0.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-openrgb-server.git",
-	"bugs": "https://github.com/bitfocus/companion-module-openrgb-server/issues",
+	"repository": "git+https://github.com/bitfocus/companion-module-openrgb-sdk.git",
+	"bugs": "https://github.com/bitfocus/companion-module-openrgb-sdk/issues",
 	"maintainers": [
 		{
 			"name": "Julian Waller",

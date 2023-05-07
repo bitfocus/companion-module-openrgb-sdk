@@ -1,5 +1,5 @@
 {
-	"name": "openrgb-server",
+	"name": "openrgb-sdk",
 	"version": "0.1.0",
 	"main": "main.js",
 	"type": "module",
@@ -9,7 +9,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-openrgb-server.git"
+		"url": "git+https://github.com/bitfocus/companion-module-openrgb-sdk.git"
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.4.0",
