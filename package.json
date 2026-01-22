@@ -13,7 +13,7 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.4.0",
-		"lodash-es": "^4.17.21",
+		"lodash-es": "^4.17.23",
 		"openrgb-sdk": "^0.5.2",
 		"p-queue": "^7.3.4",
 		"p-timeout": "^6.1.1"
