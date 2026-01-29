@@ -19,7 +19,7 @@
 		"p-timeout": "^6.1.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.2.0"
+		"@companion-module/tools": "^1.5.2"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
