@@ -12,14 +12,14 @@
 		"url": "git+https://github.com/bitfocus/companion-module-openrgb-sdk.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.4.0",
+		"@companion-module/base": "~1.15.1",
 		"lodash-es": "^4.18.1",
 		"openrgb-sdk": "^0.5.2",
 		"p-queue": "^7.3.4",
 		"p-timeout": "^6.1.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.8.0"
+		"@companion-module/tools": "^2.9.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
